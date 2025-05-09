@@ -1,102 +1,102 @@
 # Query Manager
 
-Query Manager, farklı veritabanlarından sorgu çalıştırabilen ve sonuçları HTML formatında e-posta olarak gönderen bir web uygulamasıdır.
+Query Manager is een webapplicatie waarmee u query's kunt uitvoeren op verschillende databases en de resultaten kunt verzenden als HTML-e-mail.
 
-## Özellikler
+## Functies
 
-- Farklı veritabanı bağlantıları oluşturma ve yönetme
-- SQL sorguları oluşturma ve kaydetme
-- Sorgu sonuçlarını HTML formatında e-posta olarak gönderme
-- Sorgu sonuçlarını web arayüzünde görüntüleme
-- Zamanlanmış sorgu çalıştırma (cron expression ile)
-- RESTful API desteği
+- Aanmaken en beheren van verschillende databaseverbindingen
+- SQL-query's maken en opslaan
+- Query-resultaten verzenden als HTML-e-mail
+- Query-resultaten bekijken in de webinterface
+- Geplande query-uitvoering (met cron-expressie)
+- RESTful API-ondersteuning
 
-## Kurulum
+## Installatie
 
-1. Gerekli Python paketlerini yükleyin:
+1. Installeer de benodigde Python-pakketten:
 ```bash
 pip install -r requirements.txt
 ```
 
-2. PostgreSQL veritabanını kurun ve yapılandırın.
+2. Installeer en configureer de PostgreSQL-database.
 
-3. `.env` dosyası oluşturun ve aşağıdaki değişkenleri ayarlayın:
+3. Maak een `.env` bestand aan en stel de volgende variabelen in:
 ```
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 POSTGRES_DB=query_manager
-POSTGRES_USER=your_username
-POSTGRES_PASSWORD=your_password
+POSTGRES_USER=uw_gebruikersnaam
+POSTGRES_PASSWORD=uw_wachtwoord
 SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USERNAME=your_email@gmail.com
-SMTP_PASSWORD=your_app_password
-SECRET_KEY=your_secret_key
-API_KEY=your_api_key_here
+SMTP_USERNAME=uw_email@gmail.com
+SMTP_PASSWORD=uw_app_wachtwoord
+SECRET_KEY=uw_geheime_sleutel
+API_KEY=uw_api_sleutel_hier
 ```
 
-4. Uygulamayı başlatın:
+4. Start de applicatie:
 ```bash
 python app.py
 ```
 
-## Kullanım
+## Gebruik
 
-1. Web tarayıcınızda `http://localhost:5000` adresine gidin
-2. "New Connection" butonuna tıklayarak yeni bir veritabanı bağlantısı oluşturun
-3. "New Query" butonuna tıklayarak yeni bir sorgu oluşturun
-4. Sorguyu çalıştırmak için "Run" butonuna tıklayın
-5. Sonuçları görüntülemek için "Results" butonuna tıklayın
+1. Ga naar `http://localhost:5000` in uw webbrowser
+2. Klik op de "Nieuwe Verbinding" knop om een nieuwe databaseverbinding aan te maken
+3. Klik op de "Nieuwe Query" knop om een nieuwe query aan te maken
+4. Klik op de "Uitvoeren" knop om de query uit te voeren
+5. Klik op de "Resultaten" knop om de resultaten te bekijken
 
-## API Dokümantasyonu
+## API Documentatie
 
-Tüm API istekleri için `X-API-Key` header'ı gereklidir.
+Voor alle API-verzoeken is de `X-API-Key` header vereist.
 
-### Veritabanı Bağlantıları
+### Databaseverbindingen
 
-#### Tüm Bağlantıları Listele
+#### Alle Verbindingen Weergeven
 ```http
 GET /api/connections
 ```
 
-#### Yeni Bağlantı Oluştur
+#### Nieuwe Verbinding Aanmaken
 ```http
 POST /api/connections
 Content-Type: application/json
 
 {
-    "name": "My Database",
+    "name": "Mijn Database",
     "db_type": "postgresql",
     "host": "localhost",
     "port": 5432,
     "database": "mydb",
-    "username": "user",
-    "password": "pass"
+    "username": "gebruiker",
+    "password": "wachtwoord"
 }
 ```
 
-### Sorgular
+### Query's
 
-#### Tüm Sorguları Listele
+#### Alle Query's Weergeven
 ```http
 GET /api/queries
 ```
 
-#### Yeni Sorgu Oluştur
+#### Nieuwe Query Aanmaken
 ```http
 POST /api/queries
 Content-Type: application/json
 
 {
-    "name": "Daily Report",
+    "name": "Dagelijks Rapport",
     "sql_query": "SELECT * FROM users",
     "connection_id": 1,
-    "email_groups": "group1@example.com, group2@example.com",
+    "email_groups": "groep1@voorbeeld.com, groep2@voorbeeld.com",
     "schedule": "0 0 * * *"
 }
 ```
 
-#### Sorgu Çalıştır
+#### Query Uitvoeren
 ```http
 POST /api/queries/{query_id}/run
 Content-Type: application/json
@@ -106,15 +106,15 @@ Content-Type: application/json
 }
 ```
 
-#### Sorgu Sonuçlarını Getir
+#### Query-resultaten Ophalen
 ```http
 GET /api/queries/{query_id}/results
 ```
 
-## Veritabanı Şeması
+## Databaseschema
 
 ### DatabaseConnection
-- id: Integer (Primary Key)
+- id: Integer (Primaire Sleutel)
 - name: String
 - db_type: String
 - host: String
@@ -125,10 +125,10 @@ GET /api/queries/{query_id}/results
 - created_at: DateTime
 
 ### Query
-- id: Integer (Primary Key)
+- id: Integer (Primaire Sleutel)
 - name: String
 - sql_query: Text
-- connection_id: Integer (Foreign Key)
+- connection_id: Integer (Buitenlandse Sleutel)
 - email_groups: String
 - schedule: String
 - created_at: DateTime
@@ -136,18 +136,17 @@ GET /api/queries/{query_id}/results
 - is_active: Boolean
 
 ### QueryResult
-- id: Integer (Primary Key)
-- query_id: Integer (Foreign Key)
+- id: Integer (Primaire Sleutel)
+- query_id: Integer (Buitenlandse Sleutel)
 - execution_time: DateTime
 - status: String
 - error_message: Text
 - result_data: Text
 
-## Güvenlik Notları
+## Beveiligingsnotities
 
-- Veritabanı şifreleri ve SMTP kimlik bilgileri güvenli bir şekilde saklanmalıdır
-- Üretim ortamında HTTPS kullanılmalıdır
-- E-posta gönderimi için güvenli SMTP ayarları kullanılmalıdır
-- Kullanıcı girişi ve yetkilendirme eklenmelidir
-- API anahtarı güvenli bir şekilde saklanmalı ve düzenli olarak değiştirilmelidir # XQu
-# XQu
+- Database-wachtwoorden en SMTP-inloggegevens moeten veilig worden opgeslagen
+- Gebruik HTTPS in productieomgevingen
+- Gebruik veilige SMTP-instellingen voor e-mailverzending
+- Gebruikersauthenticatie en autorisatie moeten worden toegevoegd
+- API-sleutel moet veilig worden opgeslagen en regelmatig worden gewijzigd
