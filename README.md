@@ -13,14 +13,25 @@ Query Manager is een webapplicatie waarmee u query's kunt uitvoeren op verschill
 
 ## Installatie
 
-1. Installeer de benodigde Python-pakketten:
+1. Maak een Python virtual environment aan en activeer deze:
+```bash
+# Windows
+python -m venv venv
+.\venv\Scripts\activate
+
+# Linux/MacOS
+python3 -m venv venv
+source venv/bin/activate
+```
+
+2. Installeer de benodigde Python-pakketten:
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Installeer en configureer de PostgreSQL-database.
+3. Installeer en configureer de PostgreSQL-database.
 
-3. Maak een `.env` bestand aan en stel de volgende variabelen in:
+4. Maak een `.env` bestand aan en stel de volgende variabelen in:
 ```
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
@@ -35,7 +46,7 @@ SECRET_KEY=uw_geheime_sleutel
 API_KEY=uw_api_sleutel_hier
 ```
 
-4. Start de applicatie:
+5. Start de applicatie:
 ```bash
 python app.py
 ```
