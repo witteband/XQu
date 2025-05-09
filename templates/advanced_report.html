@@ -269,7 +269,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Grafik verilerini hazırla
+        // Bereid grafiekgegevens voor
         const metrics = {{ metrics|tojson }};
         const labels = metrics.map(m => m.execution_time);
         const durations = metrics.map(m => m.total_duration);
@@ -277,18 +277,18 @@
         const cpuUsage = metrics.map(m => m.cpu_usage);
         const cacheHitRatio = metrics.map(m => m.cache_hit_ratio || 0);
 
-        // Performans trend grafiği
+        // Prestatie-trendgrafiek
         new Chart(document.getElementById('performanceTrendChart'), {
             type: 'line',
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Execution Duration (s)',
+                    label: 'Uitvoeringsduur (s)',
                     data: durations,
                     borderColor: 'rgb(75, 192, 192)',
                     tension: 0.1
                 }, {
-                    label: 'Cache Hit Ratio (%)',
+                    label: 'Cache-hitratio (%)',
                     data: cacheHitRatio,
                     borderColor: 'rgb(255, 99, 132)',
                     tension: 0.1
@@ -305,11 +305,11 @@
             }
         });
 
-        // Kaynak dağılımı grafiği
+        // Bronnendistributiegrafiek
         new Chart(document.getElementById('resourceDistributionChart'), {
             type: 'doughnut',
             data: {
-                labels: ['Memory Usage', 'CPU Usage'],
+                labels: ['Geheugengebruik', 'CPU-gebruik'],
                 datasets: [{
                     data: [
                         metrics[0].memory_usage,
@@ -327,22 +327,22 @@
             }
         });
 
-        // PDF export fonksiyonu
+        // PDF export functie
         function exportToPDF() {
-            // PDF export işlemi burada implement edilecek
-            alert('PDF export functionality will be implemented');
+            // PDF export functionaliteit wordt hier geïmplementeerd
+            alert('PDF export functionaliteit wordt geïmplementeerd');
         }
 
-        // Excel export fonksiyonu
+        // Excel export functie
         function exportToExcel() {
-            // Excel export işlemi burada implement edilecek
-            alert('Excel export functionality will be implemented');
+            // Excel export functionaliteit wordt hier geïmplementeerd
+            alert('Excel export functionaliteit wordt geïmplementeerd');
         }
 
-        // Detay görüntüleme fonksiyonu
+        // Detailweergave functie
         function showDetails(metricId) {
-            // Detay görüntüleme işlemi burada implement edilecek
-            alert('Detailed view functionality will be implemented');
+            // Detailweergave functionaliteit wordt hier geïmplementeerd
+            alert('Detailweergave functionaliteit wordt geïmplementeerd');
         }
     </script>
 </body>

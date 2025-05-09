@@ -144,42 +144,42 @@ def reject_query(query_id):
     return redirect(url_for('index'))
 
 def get_db_engine(connection):
-    """Veritabanı bağlantı URL'sini oluştur"""
+    """Maak database verbindings-URL"""
     if connection.db_type.lower() == 'oracle':
-        # Oracle için özel bağlantı URL'si
+        # Speciale verbindings-URL voor Oracle
         return sa.create_engine(
             f"oracle+oracledb://{connection.username}:{connection.password}@{connection.host}:{connection.port}/?service_name={connection.database}",
             thick_mode=None
         )
     elif connection.db_type.lower() == 'postgresql':
-        # PostgreSQL için standart bağlantı URL'si
+        # Standaard verbindings-URL voor PostgreSQL
         return sa.create_engine(
             f"postgresql://{connection.username}:{connection.password}@{connection.host}:{connection.port}/{connection.database}"
         )
     else:
-        raise ValueError(f"Desteklenmeyen veritabanı tipi: {connection.db_type}")
+        raise ValueError(f"Niet-ondersteund databasetype: {connection.db_type}")
 
 def collect_performance_metrics(engine, query, start_time):
-    """Sorgu performans metriklerini topla"""
+    """Verzamel query prestatiemetrieken"""
     metrics = {}
     
-    # Toplam süre
+    # Totale duur
     total_duration = time.time() - start_time
     metrics['total_duration'] = total_duration
     
-    # Veritabanı tipine göre performans metriklerini topla
+    # Verzamel prestatiemetrieken op basis van databasetype
     if 'oracle' in str(engine.url):
         with engine.connect() as conn:
-            # Oracle için EXPLAIN PLAN kullan
+            # Gebruik EXPLAIN PLAN voor Oracle
             plan_query = f"EXPLAIN PLAN FOR {query}"
             conn.execute(plan_query)
             
-            # Plan detaylarını al
+            # Haal plandetails op
             plan_details = conn.execute("""
                 SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(NULL, NULL, 'ALL'))
             """).fetchall()
             
-            # Plan tipini belirle
+            # Bepaal plantype
             plan_type = 'Unknown'
             for row in plan_details:
                 if 'TABLE ACCESS' in str(row):
@@ -189,58 +189,58 @@ def collect_performance_metrics(engine, query, start_time):
             
             metrics['plan_type'] = plan_type
             
-            # Oracle istatistiklerini al
+            # Haal Oracle statistieken op
             stats = conn.execute("""
                 SELECT name, value 
                 FROM v$statname n, v$mystat s 
                 WHERE n.statistic# = s.statistic#
             """).fetchall()
             
-            # Önbellek isabet oranını hesapla
+            # Bereken cache-hitratio
             buffer_cache_hits = next((s[1] for s in stats if 'buffer cache hit ratio' in s[0].lower()), 0)
             metrics['cache_hit_ratio'] = buffer_cache_hits
             
-            # Uyarıları belirle
+            # Bepaal waarschuwingen
             warnings = []
             if plan_type == 'Table Access':
-                warnings.append("Sequential scan kullanılıyor - indeks eklenebilir")
+                warnings.append("Sequentieel scan wordt gebruikt - index kan worden toegevoegd")
             if buffer_cache_hits < 80:
-                warnings.append("Düşük önbellek isabet oranı")
+                warnings.append("Lage cache-hitratio")
             metrics['warnings'] = json.dumps(warnings)
             
     elif 'postgresql' in str(engine.url):
         with engine.connect() as conn:
-            # PostgreSQL için EXPLAIN ANALYZE kullan
+            # Gebruik EXPLAIN ANALYZE voor PostgreSQL
             plan_query = f"EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) {query}"
             plan_result = conn.execute(plan_query).scalar()
             plan_data = json.loads(plan_result)[0]
             
-            # Planlama ve çalıştırma süreleri
-            metrics['planning_time'] = plan_data.get('Planning Time', 0) / 1000  # ms to s
-            metrics['execution_time_db'] = plan_data.get('Execution Time', 0) / 1000  # ms to s
+            # Plannings- en uitvoeringstijden
+            metrics['planning_time'] = plan_data.get('Planning Time', 0) / 1000  # ms naar s
+            metrics['execution_time_db'] = plan_data.get('Execution Time', 0) / 1000  # ms naar s
             
-            # Satır sayıları
+            # Aantal rijen
             metrics['plan_rows'] = plan_data.get('Plan', {}).get('Plan Rows', 0)
             metrics['actual_rows'] = plan_data.get('Plan', {}).get('Actual Rows', 0)
             
-            # Plan tipi
+            # Plantype
             metrics['plan_type'] = plan_data.get('Plan', {}).get('Node Type', '')
             
-            # Önbellek ve indeks kullanımı
+            # Cache- en indexgebruik
             shared_hits = plan_data.get('Shared Hit Blocks', 0)
             shared_reads = plan_data.get('Shared Read Blocks', 0)
             total_blocks = shared_hits + shared_reads
             metrics['cache_hit_ratio'] = (shared_hits / total_blocks * 100) if total_blocks > 0 else 0
             
-            # Performans uyarıları
+            # Prestatie-waarschuwingen
             warnings = []
             if metrics['plan_type'] == 'Seq Scan':
-                warnings.append("Sequential scan kullanılıyor - indeks eklenebilir")
+                warnings.append("Sequentieel scan wordt gebruikt - index kan worden toegevoegd")
             if metrics['cache_hit_ratio'] < 80:
-                warnings.append("Düşük önbellek isabet oranı")
+                warnings.append("Lage cache-hitratio")
             metrics['warnings'] = json.dumps(warnings)
     
-    # Sistem kaynak kullanımı
+    # Systeembronnengebruik
     process = psutil.Process()
     metrics['memory_usage'] = process.memory_info().rss / 1024 / 1024  # MB
     metrics['cpu_usage'] = process.cpu_percent()
@@ -253,30 +253,30 @@ def collect_performance_metrics(engine, query, start_time):
 def run_query(query_id):
     query = Query.query.get_or_404(query_id)
     
-    # Yetki kontrolü - Admin tüm sorguları çalıştırabilir
+    # Machtigingscontrole - Admin kan alle query's uitvoeren
     if not current_user.is_admin() and query.creator_id != current_user.id:
-        flash('You do not have permission to run this query.', 'error')
+        flash('U heeft geen toestemming om deze query uit te voeren.', 'error')
         return redirect(url_for('index'))
     
-    # Onay kontrolü - Admin onaylı olmayan sorguları da çalıştırabilir
+    # Goedkeuringscontrole - Admin kan ook niet-goedgekeurde query's uitvoeren
     if not query.is_approved and not current_user.is_admin():
-        flash('This query is not approved yet.', 'error')
+        flash('Deze query is nog niet goedgekeurd.', 'error')
         return redirect(url_for('index'))
     
     connection = DatabaseConnection.query.get(query.connection_id)
     
     try:
-        # Veritabanı bağlantısını oluştur
+        # Maak databaseverbinding
         engine = get_db_engine(connection)
         
-        # Performans metriklerini topla
+        # Verzamel prestatiemetrieken
         start_time = time.time()
         
-        # Sorguyu çalıştır
+        # Voer query uit
         with engine.connect() as conn:
             result = pd.read_sql(query.sql_query, conn)
         
-        # Performans metriklerini kaydet
+        # Sla prestatiemetrieken op
         metrics = collect_performance_metrics(engine, query.sql_query, start_time)
         performance_metrics = QueryPerformanceMetrics(
             query_id=query.id,
@@ -294,7 +294,7 @@ def run_query(query_id):
         )
         db.session.add(performance_metrics)
         
-        # Sonucu kaydet
+        # Sla resultaat op
         query_result = QueryResult(
             query_id=query.id,
             status='success',
@@ -302,11 +302,11 @@ def run_query(query_id):
         )
         db.session.add(query_result)
         
-        # Son çalıştırma zamanını güncelle
+        # Update laatste uitvoeringstijd
         query.last_run = datetime.utcnow()
         db.session.commit()
         
-        # E-posta gönder
+        # Verstuur e-mail
         email_groups = [email.strip() for email in query.email_groups.split(',')]
         email_sender.send_query_results(
             email_groups,
@@ -315,7 +315,7 @@ def run_query(query_id):
             result
         )
         
-        flash('Query executed and results sent successfully!', 'success')
+        flash('Query uitgevoerd en resultaten succesvol verzonden!', 'success')
     except Exception as e:
         query_result = QueryResult(
             query_id=query.id,
@@ -329,7 +329,7 @@ def run_query(query_id):
         )
         db.session.add(query_result)
         db.session.commit()
-        flash(f'Error executing query: {str(e)}', 'error')
+        flash(f'Fout bij uitvoeren query: {str(e)}', 'error')
     
     return redirect(url_for('index'))
 
@@ -344,9 +344,9 @@ def query_results(query_id):
 def query_metrics(query_id):
     query = Query.query.get_or_404(query_id)
     
-    # Yetki kontrolü - Admin tüm metrikleri görebilir
+    # Machtigingscontrole - Admin kan alle metrieken bekijken
     if not current_user.is_admin() and query.creator_id != current_user.id:
-        flash('You do not have permission to view these metrics.', 'error')
+        flash('U heeft geen toestemming om deze metrieken te bekijken.', 'error')
         return redirect(url_for('index'))
     
     metrics = QueryPerformanceMetrics.query.filter_by(query_id=query_id).order_by(QueryPerformanceMetrics.execution_time.desc()).all()
@@ -358,14 +358,14 @@ def query_metrics(query_id):
 def advanced_report(query_id):
     query = Query.query.get_or_404(query_id)
     
-    # Yetki kontrolü - Admin tüm raporları görebilir
+    # Machtigingscontrole - Admin kan alle rapporten bekijken
     if not current_user.is_admin() and query.creator_id != current_user.id:
-        flash('You do not have permission to view this report.', 'error')
+        flash('U heeft geen toestemming om dit rapport te bekijken.', 'error')
         return redirect(url_for('index'))
     
     metrics = QueryPerformanceMetrics.query.filter_by(query_id=query_id).order_by(QueryPerformanceMetrics.execution_time.desc()).all()
     
-    # Performans skoru hesaplama
+    # Bereken prestatie-score
     for metric in metrics:
         execution_score = max(0, 100 - (metric.total_duration * 10))
         resource_score = max(0, 100 - ((metric.memory_usage / 1000) + (metric.cpu_usage / 2)))
@@ -374,7 +374,7 @@ def advanced_report(query_id):
     
     return render_template('advanced_report.html', query=query, metrics=metrics)
 
-# Admin paneli route'u
+# Admin panel route
 @app.route('/admin')
 @login_required
 @role_required(['admin'])
@@ -387,7 +387,7 @@ def admin_panel():
                          active_queries=active_queries,
                          users=users)
 
-# Operator paneli route'u
+# Operator panel route
 @app.route('/operator')
 @login_required
 @role_required(['operator'])
@@ -603,11 +603,11 @@ def test_connection(connection_id):
 def delete_connection(connection_id):
     connection = DatabaseConnection.query.get_or_404(connection_id)
     try:
-        # Bağlantıyı kullanan sorguları kontrol et
+        # Controleer of de verbinding wordt gebruikt door query's
         if connection.queries:
             return jsonify({
                 'status': 'error',
-                'error': 'Cannot delete connection that is being used by queries'
+                'error': 'Kan verbinding niet verwijderen die wordt gebruikt door query\'s'
             })
         
         db.session.delete(connection)

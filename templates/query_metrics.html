@@ -104,20 +104,20 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Grafik verilerini hazırla
+        // Bereid grafiekgegevens voor
         const metrics = {{ metrics|tojson }};
         const labels = metrics.map(m => m.execution_time);
         const durations = metrics.map(m => m.total_duration);
         const memoryUsage = metrics.map(m => m.memory_usage);
         const cpuUsage = metrics.map(m => m.cpu_usage);
 
-        // Çalıştırma süresi grafiği
+        // Uitvoeringstijdgrafiek
         new Chart(document.getElementById('executionTimeChart'), {
             type: 'line',
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Total Duration (s)',
+                    label: 'Totale duur (s)',
                     data: durations,
                     borderColor: 'rgb(75, 192, 192)',
                     tension: 0.1
@@ -133,18 +133,18 @@
             }
         });
 
-        // Kaynak kullanımı grafiği
+        // Bronnengebruikgrafiek
         new Chart(document.getElementById('resourceUsageChart'), {
             type: 'line',
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Memory Usage (MB)',
+                    label: 'Geheugengebruik (MB)',
                     data: memoryUsage,
                     borderColor: 'rgb(255, 99, 132)',
                     tension: 0.1
                 }, {
-                    label: 'CPU Usage (%)',
+                    label: 'CPU-gebruik (%)',
                     data: cpuUsage,
                     borderColor: 'rgb(54, 162, 235)',
                     tension: 0.1

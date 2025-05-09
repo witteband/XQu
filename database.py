@@ -45,18 +45,18 @@ class Query(db.Model):
     name = db.Column(db.String(100), nullable=False)
     sql_query = db.Column(db.Text, nullable=False)
     connection_id = db.Column(db.Integer, db.ForeignKey('database_connection.id'), nullable=False)
-    email_groups = db.Column(db.String(500), nullable=False)  # Comma-separated email addresses
-    schedule = db.Column(db.String(100))  # Cron expression for scheduling
+    email_groups = db.Column(db.String(500), nullable=False)  # Komma-gescheiden e-mailadressen
+    schedule = db.Column(db.String(100))  # Cron-expressie voor planning
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_run = db.Column(db.DateTime)
-    is_active = db.Column(db.Boolean, default=False)  # Changed to False by default
-    is_approved = db.Column(db.Boolean, default=False)  # New field for approval status
-    approved_by = db.Column(db.Integer, db.ForeignKey('user.id'))  # Admin who approved
-    approved_at = db.Column(db.DateTime)  # When it was approved
-    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Who created the query
-    contact_person = db.Column(db.String(100))  # Contact person for the query
-    contact_email = db.Column(db.String(120))  # Contact email for the query
-    contact_phone = db.Column(db.String(20))  # Contact phone for the query
+    is_active = db.Column(db.Boolean, default=False)  # Standaard ingesteld op False
+    is_approved = db.Column(db.Boolean, default=False)  # Nieuw veld voor goedkeuringsstatus
+    approved_by = db.Column(db.Integer, db.ForeignKey('user.id'))  # Admin die heeft goedgekeurd
+    approved_at = db.Column(db.DateTime)  # Wanneer het is goedgekeurd
+    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Wie de query heeft gemaakt
+    contact_person = db.Column(db.String(100))  # Contactpersoon voor de query
+    contact_email = db.Column(db.String(120))  # Contact-e-mail voor de query
+    contact_phone = db.Column(db.String(20))  # Contacttelefoon voor de query
     performance_metrics = db.relationship('QueryPerformanceMetrics', backref='query', lazy=True)
 
 class QueryResult(db.Model):
@@ -65,34 +65,34 @@ class QueryResult(db.Model):
     execution_time = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(50))  # success, error
     error_message = db.Column(db.Text)
-    result_data = db.Column(db.Text)  # JSON string of the query results
+    result_data = db.Column(db.Text)  # JSON-string van de query-resultaten
 
 class QueryPerformanceMetrics(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     query_id = db.Column(db.Integer, db.ForeignKey('query.id'), nullable=False)
     execution_time = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Zaman metrikleri
-    total_duration = db.Column(db.Float)  # Toplam çalışma süresi (saniye)
-    planning_time = db.Column(db.Float)   # Planlama süresi (saniye)
-    execution_time_db = db.Column(db.Float)  # Veritabanı çalıştırma süresi (saniye)
+    # Tijdmetrieken
+    total_duration = db.Column(db.Float)  # Totale uitvoeringstijd (seconden)
+    planning_time = db.Column(db.Float)   # Planningsduur (seconden)
+    execution_time_db = db.Column(db.Float)  # Database uitvoeringstijd (seconden)
     
-    # Kaynak kullanım metrikleri
-    rows_processed = db.Column(db.Integer)  # İşlenen satır sayısı
-    memory_usage = db.Column(db.Float)      # Bellek kullanımı (MB)
-    cpu_usage = db.Column(db.Float)         # CPU kullanımı (%)
+    # Bronnengebruik metrieken
+    rows_processed = db.Column(db.Integer)  # Aantal verwerkte rijen
+    memory_usage = db.Column(db.Float)      # Geheugengebruik (MB)
+    cpu_usage = db.Column(db.Float)         # CPU-gebruik (%)
     
-    # Sorgu planı metrikleri
-    plan_type = db.Column(db.String(50))    # Sorgu planı tipi (sequential scan, index scan, etc.)
-    plan_rows = db.Column(db.Integer)       # Planlanan satır sayısı
-    actual_rows = db.Column(db.Integer)     # Gerçek satır sayısı
+    # Query plan metrieken
+    plan_type = db.Column(db.String(50))    # Query plantype (sequentieel scan, index scan, etc.)
+    plan_rows = db.Column(db.Integer)       # Gepland aantal rijen
+    actual_rows = db.Column(db.Integer)     # Werkelijk aantal rijen
     
-    # Performans uyarıları
-    warnings = db.Column(db.Text)           # Performans uyarıları (JSON formatında)
+    # Prestatie-waarschuwingen
+    warnings = db.Column(db.Text)           # Prestatie-waarschuwingen (JSON-formaat)
     
-    # İstatistikler
-    cache_hit_ratio = db.Column(db.Float)   # Önbellek isabet oranı
-    index_usage = db.Column(db.Float)       # İndeks kullanım oranı
+    # Statistieken
+    cache_hit_ratio = db.Column(db.Float)   # Cache-hitratio
+    index_usage = db.Column(db.Float)
     
     def to_dict(self):
         return {
