@@ -10,6 +10,7 @@ Query Manager is een webapplicatie waarmee u query's kunt uitvoeren op verschill
 - Query-resultaten bekijken in de webinterface
 - Geplande query-uitvoering (met cron-expressie)
 - RESTful API-ondersteuning
+- Ondersteuning voor SQLite (standaard) en PostgreSQL databases
 
 ## Installatie
 
@@ -29,15 +30,26 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-3. Installeer en configureer de PostgreSQL-database.
+3. Maak een `.env` bestand aan en stel de volgende variabelen in:
 
-4. Maak een `.env` bestand aan en stel de volgende variabelen in:
+Voor SQLite (standaard):
 ```
+DATABASE_TYPE=sqlite
+SQLITE_DB_PATH=data/query_manager.db
+```
+
+Voor PostgreSQL:
+```
+DATABASE_TYPE=postgresql
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 POSTGRES_DB=query_manager
 POSTGRES_USER=uw_gebruikersnaam
 POSTGRES_PASSWORD=uw_wachtwoord
+```
+
+Algemene instellingen:
+```
 SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USERNAME=uw_email@gmail.com
@@ -46,10 +58,23 @@ SECRET_KEY=uw_geheime_sleutel
 API_KEY=uw_api_sleutel_hier
 ```
 
-5. Start de applicatie:
+4. Start de applicatie:
 ```bash
 python app.py
 ```
+
+## Database Configuratie
+
+### SQLite (Standaard)
+- SQLite wordt standaard gebruikt en vereist geen extra installatie
+- De database wordt opgeslagen in `data/query_manager.db`
+- De database blijft behouden, zelfs als de server wordt afgesloten
+- Ideaal voor ontwikkeling en kleine tot middelgrote implementaties
+
+### PostgreSQL
+- Voor grotere implementaties of wanneer meerdere gebruikers gelijktijdig toegang nodig hebben
+- Vereist een geïnstalleerde PostgreSQL-server
+- Configureer de verbinding via de `.env` bestand
 
 ## Gebruik
 
@@ -161,3 +186,4 @@ GET /api/queries/{query_id}/results
 - Gebruik veilige SMTP-instellingen voor e-mailverzending
 - Gebruikersauthenticatie en autorisatie moeten worden toegevoegd
 - API-sleutel moet veilig worden opgeslagen en regelmatig worden gewijzigd
+- Voor SQLite: Zorg ervoor dat de database-bestand niet toegankelijk is via de webserver

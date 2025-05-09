@@ -4,6 +4,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
+    # Database type selection (sqlite or postgresql)
+    DATABASE_TYPE = os.getenv('DATABASE_TYPE', 'sqlite')
+    
+    # SQLite database settings
+    SQLITE_DB_PATH = os.getenv('SQLITE_DB_PATH', 'data/query_manager.db')
+    
     # PostgreSQL database-instellingen
     POSTGRES_HOST = os.getenv('POSTGRES_HOST', 'localhost')
     POSTGRES_PORT = os.getenv('POSTGRES_PORT', '5432')
@@ -22,5 +28,15 @@ class Config:
     
     # Flask instellingen
     SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key')
-    SQLALCHEMY_DATABASE_URI = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+    
+    # Database URI configuration
+    @property
+    def SQLALCHEMY_DATABASE_URI(self):
+        if self.DATABASE_TYPE == 'sqlite':
+            # Ensure the data directory exists
+            os.makedirs(os.path.dirname(self.SQLITE_DB_PATH), exist_ok=True)
+            return f"sqlite:///{self.SQLITE_DB_PATH}"
+        else:
+            return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+    
     SQLALCHEMY_TRACK_MODIFICATIONS = False 
