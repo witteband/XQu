@@ -94,15 +94,66 @@ def new_connection():
         return redirect(url_for('index'))
     return render_template('new_connection.html')
 
+def execute_multi_database_query(query, connections_data):
+    """
+    Execute a query across multiple databases and join the results
+    """
+    results = []
+    engines = []
+    
+    try:
+        # Create database connections
+        for conn_data in connections_data:
+            connection = DatabaseConnection.query.get(conn_data['connection_id'])
+            engine = get_db_engine(connection)
+            engines.append(engine)
+            
+            # Execute query for this database
+            with engine.connect() as conn:
+                # Modify the query to use case-insensitive column names
+                modified_query = query.sql_query
+                if conn_data.get('join_columns'):
+                    join_cols = [col.strip() for col in conn_data['join_columns'].split(',')]
+                    for col in join_cols:
+                        # Replace column references with LOWER() function for case-insensitive comparison
+                        modified_query = modified_query.replace(
+                            f"{col}",
+                            f"LOWER({col})"
+                        )
+                
+                result = pd.read_sql(modified_query, conn)
+                results.append(result)
+        
+        # Join results if multiple databases
+        if len(results) > 1:
+            final_result = results[0]
+            for i in range(1, len(results)):
+                join_cols = [col.strip() for col in connections_data[i]['join_columns'].split(',')]
+                # Convert join columns to lowercase for case-insensitive join
+                for col in join_cols:
+                    final_result[col] = final_result[col].str.lower()
+                    results[i][col] = results[i][col].str.lower()
+                final_result = pd.merge(final_result, results[i], on=join_cols, how='inner')
+            return final_result
+        else:
+            return results[0]
+            
+    except Exception as e:
+        raise Exception(f"Error executing multi-database query: {str(e)}")
+    finally:
+        # Close all database connections
+        for engine in engines:
+            engine.dispose()
+
 @app.route('/query/new', methods=['GET', 'POST'])
 @login_required
 @role_required(['user', 'admin'])
 def new_query():
     if request.method == 'POST':
+        # Create the query
         query = Query(
             name=request.form['name'],
             sql_query=request.form['sql_query'],
-            connection_id=int(request.form['connection_id']),
             email_groups=request.form['email_groups'],
             schedule=request.form['schedule'],
             creator_id=current_user.id,
@@ -113,9 +164,24 @@ def new_query():
             is_approved=False
         )
         db.session.add(query)
+        db.session.flush()  # Get the query ID
+        
+        # Add database connections
+        connection_ids = request.form.getlist('connection_ids[]')
+        join_columns = request.form.getlist('join_columns[]')
+        
+        for conn_id, join_cols in zip(connection_ids, join_columns):
+            query_conn = QueryDatabaseConnection(
+                query_id=query.id,
+                connection_id=int(conn_id),
+                join_columns=join_cols
+            )
+            db.session.add(query_conn)
+        
         db.session.commit()
         flash('Query added successfully! Waiting for admin approval.', 'success')
         return redirect(url_for('index'))
+    
     connections = DatabaseConnection.query.all()
     return render_template('new_query.html', connections=connections)
 
@@ -253,48 +319,29 @@ def collect_performance_metrics(engine, query, start_time):
 def run_query(query_id):
     query = Query.query.get_or_404(query_id)
     
-    # Machtigingscontrole - Admin kan alle query's uitvoeren
+    # Permission check
     if not current_user.is_admin() and query.creator_id != current_user.id:
-        flash('U heeft geen toestemming om deze query uit te voeren.', 'error')
+        flash('You do not have permission to run this query.', 'error')
         return redirect(url_for('index'))
     
-    # Goedkeuringscontrole - Admin kan ook niet-goedgekeurde query's uitvoeren
+    # Approval check
     if not query.is_approved and not current_user.is_admin():
-        flash('Deze query is nog niet goedgekeurd.', 'error')
+        flash('This query has not been approved yet.', 'error')
         return redirect(url_for('index'))
-    
-    connection = DatabaseConnection.query.get(query.connection_id)
     
     try:
-        # Maak databaseverbinding
-        engine = get_db_engine(connection)
+        # Get database connections for this query
+        connections_data = []
+        for query_conn in query.database_connections:
+            connections_data.append({
+                'connection_id': query_conn.connection_id,
+                'join_columns': query_conn.join_columns
+            })
         
-        # Verzamel prestatiemetrieken
-        start_time = time.time()
+        # Execute the query
+        result = execute_multi_database_query(query, connections_data)
         
-        # Voer query uit
-        with engine.connect() as conn:
-            result = pd.read_sql(query.sql_query, conn)
-        
-        # Sla prestatiemetrieken op
-        metrics = collect_performance_metrics(engine, query.sql_query, start_time)
-        performance_metrics = QueryPerformanceMetrics(
-            query_id=query.id,
-            total_duration=metrics['total_duration'],
-            planning_time=metrics.get('planning_time'),
-            execution_time_db=metrics.get('execution_time_db'),
-            rows_processed=len(result),
-            memory_usage=metrics['memory_usage'],
-            cpu_usage=metrics['cpu_usage'],
-            plan_type=metrics.get('plan_type'),
-            plan_rows=metrics.get('plan_rows'),
-            actual_rows=metrics.get('actual_rows'),
-            warnings=metrics.get('warnings'),
-            cache_hit_ratio=metrics.get('cache_hit_ratio')
-        )
-        db.session.add(performance_metrics)
-        
-        # Sla resultaat op
+        # Store the result
         query_result = QueryResult(
             query_id=query.id,
             status='success',
@@ -302,36 +349,33 @@ def run_query(query_id):
         )
         db.session.add(query_result)
         
-        # Update laatste uitvoeringstijd
+        # Update last run time
         query.last_run = datetime.utcnow()
         db.session.commit()
         
-        # Verstuur e-mail
-        email_groups = [email.strip() for email in query.email_groups.split(',')]
-        email_sender.send_query_results(
-            email_groups,
-            query.name,
-            query.name,
-            result
-        )
+        # Send email if configured
+        if query.email_groups:
+            email_groups = [email.strip() for email in query.email_groups.split(',')]
+            email_sender.send_query_results(
+                email_groups,
+                query.name,
+                query.name,
+                result
+            )
         
-        flash('Query uitgevoerd en resultaten succesvol verzonden!', 'success')
+        flash('Query executed successfully!', 'success')
+        return redirect(url_for('query_results', query_id=query.id))
+        
     except Exception as e:
         query_result = QueryResult(
             query_id=query.id,
             status='error',
-            error_message=str(e),
-            error_contact={
-                'person': query.contact_person,
-                'email': query.contact_email,
-                'phone': query.contact_phone
-            }
+            error_message=str(e)
         )
         db.session.add(query_result)
         db.session.commit()
-        flash(f'Fout bij uitvoeren query: {str(e)}', 'error')
-    
-    return redirect(url_for('index'))
+        flash(f'Error executing query: {str(e)}', 'error')
+        return redirect(url_for('index'))
 
 @app.route('/query/results/<int:query_id>')
 def query_results(query_id):

@@ -80,20 +80,44 @@
                                 <label for="name" class="form-label">Query Name</label>
                                 <input type="text" class="form-control" id="name" name="name" required>
                             </div>
+                            
                             <div class="mb-3">
-                                <label for="connection_id" class="form-label">Database Connection</label>
-                                <select class="form-select" id="connection_id" name="connection_id" required>
-                                    <option value="">Select a database connection</option>
-                                    {% for connection in connections %}
-                                    <option value="{{ connection.id }}">
-                                        {{ connection.name }} ({{ connection.db_type }} - {{ connection.host }}:{{ connection.port }}/{{ connection.database }})
-                                    </option>
-                                    {% endfor %}
-                                </select>
+                                <label class="form-label">Database Connections</label>
+                                <div id="database-connections">
+                                    <div class="database-connection mb-3">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <select class="form-select connection-select" name="connection_ids[]" required>
+                                                    <option value="">Select a database connection</option>
+                                                    {% for connection in connections %}
+                                                    <option value="{{ connection.id }}">
+                                                        {{ connection.name }} ({{ connection.db_type }} - {{ connection.host }}:{{ connection.port }}/{{ connection.database }})
+                                                    </option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-5">
+                                                <input type="text" class="form-control join-columns" name="join_columns[]" placeholder="Join columns (comma-separated)">
+                                            </div>
+                                            <div class="col-md-1">
+                                                <button type="button" class="btn btn-danger remove-connection" style="display: none;">
+                                                    <i class="bx bx-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-secondary mt-2" id="add-connection">
+                                    <i class="bx bx-plus"></i> Add Another Database
+                                </button>
                             </div>
+
                             <div class="mb-3">
                                 <label for="sql_query" class="form-label">SQL Query</label>
                                 <textarea class="form-control" id="sql_query" name="sql_query" rows="5" required></textarea>
+                                <small class="form-text text-muted">
+                                    For multi-database queries, use table aliases (e.g., db1.users, db2.orders) and specify join conditions in the query.
+                                </small>
                             </div>
                             <div class="mb-3">
                                 <label for="email_groups" class="form-label">Email Groups (comma-separated)</label>
@@ -132,5 +156,39 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const databaseConnections = document.getElementById('database-connections');
+        const addConnectionBtn = document.getElementById('add-connection');
+        
+        // Show/hide remove button based on number of connections
+        function updateRemoveButtons() {
+            const removeButtons = document.querySelectorAll('.remove-connection');
+            removeButtons.forEach(button => {
+                button.style.display = removeButtons.length > 1 ? 'block' : 'none';
+            });
+        }
+        
+        // Add new database connection
+        addConnectionBtn.addEventListener('click', function() {
+            const template = databaseConnections.querySelector('.database-connection').cloneNode(true);
+            template.querySelector('.connection-select').value = '';
+            template.querySelector('.join-columns').value = '';
+            databaseConnections.appendChild(template);
+            updateRemoveButtons();
+        });
+        
+        // Remove database connection
+        databaseConnections.addEventListener('click', function(e) {
+            if (e.target.closest('.remove-connection')) {
+                e.target.closest('.database-connection').remove();
+                updateRemoveButtons();
+            }
+        });
+        
+        // Initialize remove buttons
+        updateRemoveButtons();
+    });
+    </script>
 </body>
 </html> 

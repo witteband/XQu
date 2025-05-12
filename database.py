@@ -40,23 +40,33 @@ class DatabaseConnection(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     queries = db.relationship('Query', backref='connection', lazy=True)
 
+class QueryDatabaseConnection(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    query_id = db.Column(db.Integer, db.ForeignKey('query.id'), nullable=False)
+    connection_id = db.Column(db.Integer, db.ForeignKey('database_connection.id'), nullable=False)
+    join_columns = db.Column(db.String(500))  # Comma-separated list of columns to join on
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    connection = db.relationship('DatabaseConnection', backref='query_connections')
+    query = db.relationship('Query', backref='database_connections')
+
 class Query(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     sql_query = db.Column(db.Text, nullable=False)
-    connection_id = db.Column(db.Integer, db.ForeignKey('database_connection.id'), nullable=False)
-    email_groups = db.Column(db.String(500), nullable=False)  # Komma-gescheiden e-mailadressen
-    schedule = db.Column(db.String(100))  # Cron-expressie voor planning
+    email_groups = db.Column(db.String(500), nullable=False)
+    schedule = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_run = db.Column(db.DateTime)
-    is_active = db.Column(db.Boolean, default=False)  # Standaard ingesteld op False
-    is_approved = db.Column(db.Boolean, default=False)  # Nieuw veld voor goedkeuringsstatus
-    approved_by = db.Column(db.Integer, db.ForeignKey('user.id'))  # Admin die heeft goedgekeurd
-    approved_at = db.Column(db.DateTime)  # Wanneer het is goedgekeurd
-    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Wie de query heeft gemaakt
-    contact_person = db.Column(db.String(100))  # Contactpersoon voor de query
-    contact_email = db.Column(db.String(120))  # Contact-e-mail voor de query
-    contact_phone = db.Column(db.String(20))  # Contacttelefoon voor de query
+    is_active = db.Column(db.Boolean, default=False)
+    is_approved = db.Column(db.Boolean, default=False)
+    approved_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    approved_at = db.Column(db.DateTime)
+    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    contact_person = db.Column(db.String(100))
+    contact_email = db.Column(db.String(120))
+    contact_phone = db.Column(db.String(20))
     performance_metrics = db.relationship('QueryPerformanceMetrics', backref='query', lazy=True)
 
 class QueryResult(db.Model):
